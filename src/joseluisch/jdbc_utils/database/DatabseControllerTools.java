@@ -14,14 +14,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import static joseluisch.jdbc_utils.controllers.DatabaseController.excecuteQuery;
 import joseluisch.jdbc_utils.controllers.information_schema.InformationSchemaColumnsController;
-import joseluisch.jdbc_utils.controllers.information_schema.InformationSchemaViewsController;
 import joseluisch.jdbc_utils.entities.KeyColumnObject;
 import joseluisch.jdbc_utils.entities.TableDetails;
-import joseluisch.jdbc_utils.entities.ViewObject;
 import joseluisch.jdbc_utils.singleton.DataInstance;
 import joseluisch.jdbc_utils.utils.ReflectUtils;
 import joseluisch.jdbc_utils.utils.StringUtils;
@@ -387,14 +383,14 @@ public class DatabseControllerTools {
             String className = object.getClass().getSimpleName();
 
             for (KeyColumnObject keyObject : list) {
-                if (keyObject.getConstraint_name().equals("PRIMARY")) {
+                if (keyObject.getConstraint_type().equals("P")) {
                     String tableName = StringUtils.toUpperCamelCase(StringUtils.toLowerScoreCase(keyObject.getTable_name()));
                     if (className.equals(tableName)) {
                         String fieldId = keyObject.getColumn_name();
                         for (Field field : object.getClass().getDeclaredFields()) {
                             field.setAccessible(true);
 
-                            if (field.getName().equals(fieldId)) {
+                            if (field.getName().equals(fieldId.toLowerCase())) {
                                 if (field.getType().getSimpleName().equals(String.class
                                         .getSimpleName())) {
 
@@ -435,11 +431,11 @@ public class DatabseControllerTools {
 
                                 } else if (field.getType().getSimpleName().equals(Integer.class
                                         .getSimpleName())) {
-                                    String sql = "select ifnull(max(" + fieldId + "), 0) + 1  as max FROM " + keyObject.getTable_name();
+                                    String sql = "select nvl(max(" + fieldId + "), 0) + 1  as max from " + keyObject.getTable_name();
                                     Map<String, Object> map = excecuteQuery(sql, null);
                                     for (Map.Entry entry : map.entrySet()) {
                                         Map<String, Object> m = (Map<String, Object>) entry.getValue();
-                                        field.set(object, Integer.valueOf(m.get("max").toString()));
+                                        field.set(object, Integer.valueOf(m.get("MAX").toString()));
                                         break;
                                     }
                                 }
@@ -503,8 +499,19 @@ public class DatabseControllerTools {
 
     protected static void appendWheres(Map<String, String> mapKeys, Object mObject, StringBuilder builder) throws IllegalArgumentException, IllegalAccessException {
 
+        List<KeyColumnObject> columnObjects = InformationSchemaColumnsController.get(mObject);
+        String objectName = StringUtils.toLowerScoreCase(mObject.getClass().getSimpleName());
+
+        String parentTable = null;
+        for (KeyColumnObject keyObject : columnObjects) {
+            if (StringUtils.toLowerScoreCase(keyObject.getTable_name()).equalsIgnoreCase(objectName)) {
+                parentTable = keyObject.getTable_name();
+                break;
+            }
+        }
+
         builder.append(" WHERE 1 = 1 ");
-        String key = mapKeys.get(StringUtils.toLowerScoreCase(mObject.getClass().getSimpleName()));
+        String key = mapKeys.get(parentTable);
 
         for (Field f : mObject.getClass().getDeclaredFields()) {
             f.setAccessible(true);
@@ -550,10 +557,10 @@ public class DatabseControllerTools {
         List<KeyColumnObject> list = DataInstance.getInstance().getKeyColumnObjectList();
         String className = object.getClass().getSimpleName();
         for (KeyColumnObject keyObject : list) {
-            if (keyObject.getConstraint_name().equals("PRIMARY")) {
+            if (keyObject.getConstraint_type().equals("P")) {
                 String tableName = StringUtils.toUpperCamelCase(StringUtils.toLowerScoreCase(keyObject.getTable_name()));
                 if (className.equals(tableName)) {
-                    return keyObject.getColumn_name();
+                    return keyObject.getColumn_name().toLowerCase();
                 }
             }
         }

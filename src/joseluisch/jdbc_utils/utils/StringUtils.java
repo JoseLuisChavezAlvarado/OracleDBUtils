@@ -22,6 +22,7 @@ public class StringUtils {
         for (int i = 0; i < value.length(); i++) {
             if (!Character.isUpperCase(value.charAt(i))) {
                 allCaps = false;
+                break;
             }
         }
 
@@ -40,7 +41,7 @@ public class StringUtils {
                 builder.append(String.valueOf(c).toLowerCase());
             }
         }
-        return builder.toString();
+        return builder.toString().toLowerCase();
     }
 
     public static String toFirstUpperCased(String value) {
