@@ -326,45 +326,47 @@ public class DatabseControllerTools {
 
                 Object referencedObject = getReferencedObject(newObject, key);
 
-                if (referencedObject != null && referencedObject != newObject) {
-                    for (Field field : referencedObject.getClass().getDeclaredFields()) {
-                        field.setAccessible(true);
-                        if (ReflectUtils.isValidField(field)) {
+                if (ReflectUtils.isNormalized(newObject.getClass())) {
+                    if (referencedObject != null && referencedObject != newObject) {
+                        for (Field field : referencedObject.getClass().getDeclaredFields()) {
+                            field.setAccessible(true);
+                            if (ReflectUtils.isValidField(field)) {
 
-                            Object val = null;
-                            for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
-                                if (resultSet.getMetaData().getColumnLabel(i).toLowerCase().contains(field.getName().toLowerCase())) {
-                                    if (resultSet.getMetaData().getColumnType(i) == Types.TIMESTAMP) {
-                                        try {
-                                            val = resultSet.getTimestamp(value + "$" + field.getName());
-                                            val = val != null ? ((Timestamp) val).getTime() : 0L;
-                                        } catch (Exception e) {
+                                Object val = null;
+                                for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
+                                    if (resultSet.getMetaData().getColumnLabel(i).toLowerCase().contains(field.getName().toLowerCase())) {
+                                        if (resultSet.getMetaData().getColumnType(i) == Types.TIMESTAMP) {
+                                            try {
+                                                val = resultSet.getTimestamp(value + "$" + field.getName());
+                                                val = val != null ? ((Timestamp) val).getTime() : 0L;
+                                            } catch (Exception e) {
+                                            }
+                                            break;
+                                        } else if (resultSet.getMetaData().getColumnType(i) == Types.DATE) {
+                                            try {
+                                                val = resultSet.getDate(value + "$" + field.getName());
+                                                val = val != null ? ((Timestamp) val).getTime() : 0L;
+                                            } catch (Exception e) {
+                                            }
+                                            break;
+                                        } else if (resultSet.getMetaData().getColumnType(i) == Types.NUMERIC) {
+                                            if (resultSet.getMetaData().getColumnClassName(i).equals("java.math.BigDecimal")) {
+                                                val = resultSet.getInt(value + "$" + field.getName());
+                                            }
+                                            break;
                                         }
-                                        break;
-                                    } else if (resultSet.getMetaData().getColumnType(i) == Types.DATE) {
-                                        try {
-                                            val = resultSet.getDate(value + "$" + field.getName());
-                                            val = val != null ? ((Timestamp) val).getTime() : 0L;
-                                        } catch (Exception e) {
-                                        }
-                                        break;
-                                    } else if (resultSet.getMetaData().getColumnType(i) == Types.NUMERIC) {
-                                        if (resultSet.getMetaData().getColumnClassName(i).equals("java.math.BigDecimal")) {
-                                            val = resultSet.getInt(value + "$" + field.getName());
-                                        }
-                                        break;
                                     }
                                 }
-                            }
 
-                            if (field.getName().length() < 26) {
-                                val = val == null ? resultSet.getObject(value + "$" + field.getName()) : val;
-                            }
+                                if (field.getName().length() < 26) {
+                                    val = val == null ? resultSet.getObject(value + "$" + field.getName()) : val;
+                                }
 
-                            try {
-                                field.set(referencedObject, val);
-                            } catch (Exception e) {
-                                field.set(referencedObject, val.toString());
+                                try {
+                                    field.set(referencedObject, val);
+                                } catch (Exception e) {
+                                    field.set(referencedObject, val.toString());
+                                }
                             }
                         }
                     }

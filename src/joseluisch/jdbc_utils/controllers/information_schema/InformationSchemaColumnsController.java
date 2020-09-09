@@ -63,7 +63,14 @@ public class InformationSchemaColumnsController {
     public static List<KeyColumnObject> get(Object object) {
         List<KeyColumnObject> list = new ArrayList<>();
         List<KeyColumnObject> originalList = DataInstance.getInstance().getKeyColumnObjectList();
-        List<String> nodes = ReflectUtils.getChildClases(object.getClass());
+        List<String> nodes = new ArrayList<>();
+
+        if (ReflectUtils.isNormalized(object.getClass())) {
+            nodes = ReflectUtils.getChildClases(object.getClass());
+        } else {
+            nodes.add(object.getClass().getSimpleName());
+            System.err.println("La tabla " + object.getClass().getSimpleName() + " no está normalizada. NO se mostráran los registros higos de la tabla");
+        }
 
         for (String node : nodes) {
             String objectName = StringUtils.toLowerScoreCase(node);
@@ -109,5 +116,4 @@ public class InformationSchemaColumnsController {
 
         return null;
     }
-
 }

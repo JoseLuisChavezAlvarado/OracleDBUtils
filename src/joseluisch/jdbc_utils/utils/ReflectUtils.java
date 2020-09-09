@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Stack;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -134,7 +135,7 @@ public class ReflectUtils {
             return String.class.getSimpleName();
         } else if (type.contains("varchar")) {
             return String.class.getSimpleName();
-        }else if (type.contains("nvarchar2")) {
+        } else if (type.contains("nvarchar2")) {
             return String.class.getSimpleName();
         } else if (type.contains("bit")) {
             return Integer.class.getSimpleName();
@@ -142,7 +143,7 @@ public class ReflectUtils {
             return Boolean.class.getSimpleName();
         } else if (type.contains("char")) {
             return String.class.getSimpleName();
-        }else if (type.contains("nclob")) {
+        } else if (type.contains("nclob")) {
             return String.class.getSimpleName();
         } else if (type.contains("clob")) {
             return String.class.getSimpleName();
@@ -184,4 +185,40 @@ public class ReflectUtils {
                 || field.getType().getSimpleName().equalsIgnoreCase(Boolean.class.getSimpleName())
                 || field.getType().getSimpleName().equalsIgnoreCase(Integer.class.getSimpleName());
     }
+
+    public static boolean isNormalized(Class objectClass) {
+
+        if (objectClass == null) {
+            return false;
+        }
+
+        Stack<Class> nodeStack = new Stack<>();
+        nodeStack.push(objectClass);
+
+        while (!nodeStack.empty()) {
+
+            Class classNode = nodeStack.peek();
+            System.out.print(classNode.getSimpleName() + " ");
+            nodeStack.pop();
+
+            for (Class currentClass : nodeStack) {
+                if (classNode.getClass().getSimpleName().equals(currentClass.getClass().getSimpleName())) {
+                    return false;
+                }
+            }
+
+            for (Field field : classNode.getDeclaredFields()) {
+                field.setAccessible(true);
+                if (!isValidField(field)) {
+                    Class fieldClass = field.getType();
+                    if (isClass(fieldClass.getName())) {
+                        nodeStack.push(fieldClass);
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
 }
