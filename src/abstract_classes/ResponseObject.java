@@ -6,22 +6,22 @@ package abstract_classes;
  */
 public class ResponseObject<Response, Exception> {
 
-    private Object response;
+    private Response response;
     private Exception exception;
 
     public ResponseObject() {
     }
 
-    public ResponseObject(Object response, Exception exception) {
+    public ResponseObject(Response response, Exception exception) {
         this.response = response;
         this.exception = exception;
     }
 
-    public Object getResponse() {
+    public Response getResponse() {
         return response;
     }
 
-    public void setResponse(Object response) {
+    public void setResponse(Response response) {
         this.response = response;
     }
 

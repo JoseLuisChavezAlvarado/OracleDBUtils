@@ -197,9 +197,7 @@ public class ReflectUtils {
 
         while (!nodeStack.empty()) {
 
-            Class classNode = nodeStack.peek();
-            System.out.print(classNode.getSimpleName() + " ");
-            nodeStack.pop();
+            Class classNode = nodeStack.pop();
 
             for (Class currentClass : nodeStack) {
                 if (classNode.getClass().getSimpleName().equals(currentClass.getClass().getSimpleName())) {

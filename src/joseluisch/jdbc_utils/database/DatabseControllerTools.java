@@ -16,8 +16,10 @@ import java.util.Map;
 import java.util.UUID;
 import static joseluisch.jdbc_utils.controllers.DatabaseController.excecuteQuery;
 import joseluisch.jdbc_utils.controllers.information_schema.InformationSchemaColumnsController;
+import joseluisch.jdbc_utils.controllers.information_schema.InformationSchemaViewsController;
 import joseluisch.jdbc_utils.entities.KeyColumnObject;
 import joseluisch.jdbc_utils.entities.TableDetails;
+import joseluisch.jdbc_utils.entities.ViewObject;
 import joseluisch.jdbc_utils.singleton.DataInstance;
 import joseluisch.jdbc_utils.utils.ReflectUtils;
 import joseluisch.jdbc_utils.utils.StringUtils;
@@ -36,14 +38,15 @@ public class DatabseControllerTools {
 
         //GET SCHEMA KEY VALUES
         List<KeyColumnObject> columnObjects = InformationSchemaColumnsController.get(mObject);
-        //List<ViewObject> viewObjects = InformationSchemaViewsController.get();
+        List<ViewObject> viewObjects = InformationSchemaViewsController.get(mObject);
 
-//        for (ViewObject viewObject : viewObjects) {
-//            KeyColumnObject columnObject = new KeyColumnObject();
-//            columnObject.setTable_name(viewObject.getTABLE_NAME());
-//            columnObjects.add(columnObject);
-//        }
-//INIT BUILDERS
+        for (ViewObject viewObject : viewObjects) {
+            KeyColumnObject columnObject = new KeyColumnObject();
+            columnObject.setTable_name(viewObject.getTable_name());
+            columnObjects.add(columnObject);
+        }
+
+        //INIT BUILDERS
         String parentTable = StringUtils.toLowerScoreCase(mObject.getClass().getSimpleName());
         String parentAlias = StringUtils.getStringUIDD();
         String objectName = StringUtils.toLowerScoreCase(mObject.getClass().getSimpleName());
@@ -380,69 +383,67 @@ public class DatabseControllerTools {
     }
 
     protected static void fillId(Object object) throws IllegalArgumentException, IllegalAccessException {
-        if (!object.getClass().getSimpleName().equalsIgnoreCase("Usuario")) {
-            List<KeyColumnObject> list = DataInstance.getInstance().getKeyColumnObjectList();
-            String className = object.getClass().getSimpleName();
+        List<KeyColumnObject> list = DataInstance.getInstance().getKeyColumnObjectList();
+        String className = object.getClass().getSimpleName();
 
-            for (KeyColumnObject keyObject : list) {
-                if (keyObject.getConstraint_type().equals("P")) {
-                    String tableName = StringUtils.toUpperCamelCase(StringUtils.toLowerScoreCase(keyObject.getTable_name()));
-                    if (className.equals(tableName)) {
-                        String fieldId = keyObject.getColumn_name();
-                        for (Field field : object.getClass().getDeclaredFields()) {
-                            field.setAccessible(true);
+        for (KeyColumnObject keyObject : list) {
+            if (keyObject.getConstraint_type().equals("P")) {
+                String tableName = StringUtils.toUpperCamelCase(StringUtils.toLowerScoreCase(keyObject.getTable_name()));
+                if (className.equals(tableName)) {
+                    String fieldId = keyObject.getColumn_name();
+                    for (Field field : object.getClass().getDeclaredFields()) {
+                        field.setAccessible(true);
 
-                            if (field.getName().equals(fieldId.toLowerCase())) {
-                                if (field.getType().getSimpleName().equals(String.class
-                                        .getSimpleName())) {
+                        if (field.getName().equals(fieldId.toLowerCase())) {
+                            if (field.getType().getSimpleName().equals(String.class
+                                    .getSimpleName())) {
 
-                                    String table_name = InformationSchemaColumnsController.getTableName(object);
-                                    List<TableDetails> detailList = DataInstance.getInstance().getTableDetailsList(table_name);
+                                String table_name = InformationSchemaColumnsController.getTableName(object);
+                                List<TableDetails> detailList = DataInstance.getInstance().getTableDetailsList(table_name);
 
-                                    Integer intLength = 0;
-                                    for (TableDetails details : detailList) {
-                                        if (details.getField().equals(fieldId)) {
-                                            String length = details.getType().replaceAll("\\D+", "");
-                                            if (length != null && !length.isEmpty()) {
-                                                intLength = Integer.valueOf(length);
-                                            }
-                                            break;
+                                Integer intLength = 0;
+                                for (TableDetails details : detailList) {
+                                    if (details.getField().equals(fieldId)) {
+                                        String length = details.getType().replaceAll("\\D+", "");
+                                        if (length != null && !length.isEmpty()) {
+                                            intLength = Integer.valueOf(length);
                                         }
-                                    }
-
-                                    String id = UUID.randomUUID().toString();
-                                    if (id.length() > intLength) {
-
-                                        Map<String, Object> map = null;
-
-                                        do {
-                                            id = UUID.randomUUID().toString();
-                                            id = id.replace("-", "");
-                                            id = id.substring(id.length() - intLength, id.length());
-
-                                            String sql = "select " + fieldId + " FROM " + table_name + " where " + fieldId + " = ?";
-                                            List<Object> params = new ArrayList<>();
-                                            params.add(id);
-                                            map = excecuteQuery(sql, params);
-
-                                        } while (map != null && !map.isEmpty());
-
-                                    }
-
-                                    field.set(object, id);
-
-                                } else if (field.getType().getSimpleName().equals(Integer.class
-                                        .getSimpleName())) {
-                                    String sql = "select nvl(max(" + fieldId + "), 0) + 1  as max from " + keyObject.getTable_name();
-                                    Map<String, Object> map = excecuteQuery(sql, null);
-                                    for (Map.Entry entry : map.entrySet()) {
-                                        Map<String, Object> m = (Map<String, Object>) entry.getValue();
-                                        field.set(object, Integer.valueOf(m.get("MAX").toString()));
                                         break;
                                     }
                                 }
-                                return;
+
+                                String id = UUID.randomUUID().toString();
+                                if (id.length() > intLength) {
+
+                                    Map<String, Object> map = null;
+
+                                    do {
+                                        id = UUID.randomUUID().toString();
+                                        id = id.replace("-", "");
+                                        id = id.substring(id.length() - intLength, id.length());
+
+                                        String sql = "select " + fieldId + " FROM " + table_name + " where " + fieldId + " = ?";
+                                        List<Object> params = new ArrayList<>();
+                                        params.add(id);
+                                        map = excecuteQuery(sql, params);
+
+                                    } while (map != null && !map.isEmpty());
+
+                                }
+
+                                field.set(object, id);
+
+                            } else if (field.getType().getSimpleName().equals(Integer.class
+                                    .getSimpleName())) {
+                                String sql = "select nvl(max(" + fieldId + "), 0) + 1  as max from " + keyObject.getTable_name();
+                                Map<String, Object> map = excecuteQuery(sql, null);
+                                for (Map.Entry entry : map.entrySet()) {
+                                    Map<String, Object> m = (Map<String, Object>) entry.getValue();
+                                    field.set(object, Integer.valueOf(m.get("MAX").toString()));
+                                    break;
+                                }
                             }
+                            return;
                         }
                     }
                 }

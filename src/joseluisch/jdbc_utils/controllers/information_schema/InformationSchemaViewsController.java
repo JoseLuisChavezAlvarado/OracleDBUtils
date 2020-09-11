@@ -8,6 +8,7 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import joseluisch.jdbc_utils.entities.KeyColumnObject;
 import joseluisch.jdbc_utils.singleton.DataInstance;
 import joseluisch.jdbc_utils.utils.ReflectUtils;
 import joseluisch.jdbc_utils.utils.StringUtils;
@@ -53,6 +54,20 @@ public class InformationSchemaViewsController {
         return list;
     }
 
+    public static List<ViewObject> get(Object object) {
+        List<ViewObject> list = new ArrayList<>();
+        List<ViewObject> originalList = DataInstance.getInstance().getViewObjectList();
+
+        String table_name = StringUtils.toLowerScoreCase(object.getClass().getSimpleName());
+        for (ViewObject viewObject : originalList) {
+            if (StringUtils.toLowerScoreCase(viewObject.getTable_name()).equalsIgnoreCase(table_name)) {
+                list.add(viewObject);
+            }
+        }
+
+        return list;
+    }
+
     //==========================================================================
     public static String getTableName(Object object) {
 
@@ -60,9 +75,9 @@ public class InformationSchemaViewsController {
         String className = object.getClass().getSimpleName();
 
         for (ViewObject viewObject : list) {
-            String tableName = StringUtils.toUpperCamelCase(StringUtils.toLowerScoreCase(viewObject.getTABLE_NAME()));
+            String tableName = StringUtils.toUpperCamelCase(StringUtils.toLowerScoreCase(viewObject.getTable_name()));
             if (tableName.equals(className)) {
-                return viewObject.getTABLE_NAME();
+                return viewObject.getTable_name();
             }
         }
 

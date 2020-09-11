@@ -69,7 +69,7 @@ public class InformationSchemaColumnsController {
             nodes = ReflectUtils.getChildClases(object.getClass());
         } else {
             nodes.add(object.getClass().getSimpleName());
-            System.err.println("La tabla " + object.getClass().getSimpleName() + " no está normalizada. NO se mostráran los registros higos de la tabla");
+            System.err.println("La estructura de la base de datos no  normalizada, y la tabla " + object.getClass().getSimpleName() + " o sus relaciones tienen un conflicto, no sé mostrárá la información de sus relaciones");
         }
 
         for (String node : nodes) {
@@ -85,22 +85,6 @@ public class InformationSchemaColumnsController {
     }
 
     //==========================================================================
-    public static List<KeyColumnObject> clearTableNames(List<KeyColumnObject> list) {
-        List<KeyColumnObject> listResult = new ArrayList<>();
-        list.forEach((keyObject) -> {
-            boolean existe = false;
-            for (KeyColumnObject current : listResult) {
-                if (current.getTable_name().equals(keyObject.getTable_name())) {
-                    existe = true;
-                    break;
-                }
-            }
-            if (!existe) {
-                listResult.add(keyObject);
-            }
-        });
-        return listResult;
-    }
 
     public static String getTableName(Object object) {
 
