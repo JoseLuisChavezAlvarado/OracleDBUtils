@@ -6,8 +6,10 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -52,33 +54,6 @@ public class ReflectUtils {
         }
 
         return map;
-    }
-
-    public static List<String> getChildClases(Class mClass) {
-
-        List<String> list = new ArrayList<>();
-        list.add(mClass.getSimpleName());
-
-        for (Field field : mClass.getDeclaredFields()) {
-            field.setAccessible(true);
-
-            if (!field.getType().getSimpleName().equalsIgnoreCase(String.class.getSimpleName())
-                    && !field.getType().getSimpleName().equalsIgnoreCase(Double.class.getSimpleName())
-                    && !field.getType().getSimpleName().equalsIgnoreCase(Long.class.getSimpleName())
-                    && !field.getType().getSimpleName().equalsIgnoreCase(Boolean.class.getSimpleName())
-                    && !field.getType().getSimpleName().equalsIgnoreCase(Float.class.getSimpleName())
-                    && !field.getType().getSimpleName().equalsIgnoreCase(Integer.class.getSimpleName())) {
-
-                Class fieldClass = field.getType();
-                if (isClass(fieldClass.getName())) {
-                    list.addAll(getChildClases(fieldClass));
-                }
-            }
-        }
-
-        StringUtils.deleteDuplicated(list);
-
-        return list;
     }
 
     public static String[] getValidFields(Class objectClass) {
@@ -186,37 +161,122 @@ public class ReflectUtils {
                 || field.getType().getSimpleName().equalsIgnoreCase(Integer.class.getSimpleName());
     }
 
-    public static boolean isNormalized(Class objectClass) {
+    //==========================================================================
+    public static List<String> getChildClases(Class mClass) {
 
-        if (objectClass == null) {
-            return false;
+        List<String> list = new ArrayList<>();
+        list.add(mClass.getSimpleName());
+
+        for (Field field : mClass.getDeclaredFields()) {
+            field.setAccessible(true);
+
+            if (!field.getType().getSimpleName().equalsIgnoreCase(String.class.getSimpleName())
+                    && !field.getType().getSimpleName().equalsIgnoreCase(Double.class.getSimpleName())
+                    && !field.getType().getSimpleName().equalsIgnoreCase(Long.class.getSimpleName())
+                    && !field.getType().getSimpleName().equalsIgnoreCase(Boolean.class.getSimpleName())
+                    && !field.getType().getSimpleName().equalsIgnoreCase(Float.class.getSimpleName())
+                    && !field.getType().getSimpleName().equalsIgnoreCase(Integer.class.getSimpleName())) {
+
+                Class fieldClass = field.getType();
+                if (isClass(fieldClass.getName())) {
+                    list.addAll(getChildClases(fieldClass));
+                }
+            }
         }
 
+        StringUtils.deleteDuplicated(list);
+
+        return list;
+    }
+
+    public static List<String> getChildClasesUpdated(Class objectClass) {
+
         Stack<Class> nodeStack = new Stack<>();
+        Set<String> hashSet = new HashSet<>();
         nodeStack.push(objectClass);
 
         while (!nodeStack.empty()) {
 
             Class classNode = nodeStack.pop();
-
-            for (Class currentClass : nodeStack) {
-                if (classNode.getClass().getSimpleName().equals(currentClass.getClass().getSimpleName())) {
-                    return false;
-                }
-            }
+            hashSet.add(classNode.getSimpleName());
 
             for (Field field : classNode.getDeclaredFields()) {
                 field.setAccessible(true);
                 if (!isValidField(field)) {
                     Class fieldClass = field.getType();
                     if (isClass(fieldClass.getName())) {
-                        nodeStack.push(fieldClass);
+
+                        if (isTableNormalized(fieldClass)) {
+                            nodeStack.push(fieldClass);
+                        } else {
+                            hashSet.add(fieldClass.getSimpleName());
+                            System.err.println("La tabla: " + fieldClass.getSimpleName() + " no está normalizada");
+                        }
+
                     }
                 }
             }
         }
 
-        return true;
+        return new ArrayList<>(hashSet);
+    }
+
+    public static boolean isTableNormalized(Class objectClass) {
+
+        boolean result = Boolean.TRUE;
+        List<String> list = getChildClasesFrom(objectClass);
+
+        for (String className : list) {
+            if (objectClass.getSimpleName().equals(className)) {
+                result = Boolean.FALSE;
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    private static List<String> getChildClasesFrom(Class objectClass) {
+
+        Set<String> set = new HashSet<>();
+
+        if (objectClass != null) {
+
+            Stack<Class> nodeStack = new Stack<>();
+            nodeStack.push(objectClass);
+
+            boolean first = true;
+            while (!nodeStack.empty()) {
+
+                Class classNode = nodeStack.pop();
+                if (!first) {
+                    set.add(classNode.getSimpleName());
+                }
+                first = false;
+
+                for (Field field : classNode.getDeclaredFields()) {
+                    field.setAccessible(true);
+                    if (!isValidField(field)) {
+                        Class fieldClass = field.getType();
+                        if (isClass(fieldClass.getName())) {
+                            boolean isAdded = false;
+                            for (String className : set) {
+                                if (className.equals(fieldClass.getSimpleName())) {
+                                    isAdded = true;
+                                    break;
+                                }
+                            }
+
+                            if (!isAdded) {
+                                nodeStack.push(fieldClass);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return new ArrayList<>(set);
     }
 
 }

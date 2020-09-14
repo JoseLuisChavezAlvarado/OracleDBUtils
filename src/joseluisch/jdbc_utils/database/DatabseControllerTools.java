@@ -191,7 +191,7 @@ public class DatabseControllerTools {
                 boolean isDate = false;
                 for (TableDetails details : list) {
                     if (f.getName().equalsIgnoreCase(details.getField())) {
-                        if (details.getType().contains("date") || details.getType().contains("timestamp")) {
+                        if (details.getType().toLowerCase().contains("date") || details.getType().toLowerCase().contains("timestamp")) {
                             isDate = Boolean.TRUE;
                             break;
                         }
@@ -230,7 +230,7 @@ public class DatabseControllerTools {
                     boolean isDate = false;
                     for (TableDetails details : list) {
                         if (f.getName().equalsIgnoreCase(details.getField())) {
-                            if (details.getType().contains("date") || details.getType().contains("timestamp")) {
+                            if (details.getType().toLowerCase().contains("date") || details.getType().toLowerCase().contains("timestamp")) {
                                 isDate = Boolean.TRUE;
                                 break;
                             }
@@ -329,7 +329,7 @@ public class DatabseControllerTools {
 
                 Object referencedObject = getReferencedObject(newObject, key);
 
-                if (ReflectUtils.isNormalized(newObject.getClass())) {
+                if (ReflectUtils.isTableNormalized(referencedObject.getClass())) {
                     if (referencedObject != null && referencedObject != newObject) {
                         for (Field field : referencedObject.getClass().getDeclaredFields()) {
                             field.setAccessible(true);
@@ -485,16 +485,17 @@ public class DatabseControllerTools {
                 }
 
                 if (newParentTable != null) {
-
                     String childStringClass = StringUtils.toUpperCamelCase(newParentTable);
-
                     Object childObjectInstance = ReflectUtils.getChildObjectInstance(mObject, childStringClass);
 
-                    builderResult.append(" left join ").append(newParentTable).append(" ").append(newParentAlias);
-                    builderResult.append(" on ").append(newParentAlias).append(".").append(keyObject.getReferenced_column_name()).append(" = ");
-                    builderResult.append(parentAlias).append(".").append(keyObject.getColumn_name());
+                    if (ReflectUtils.isTableNormalized(childObjectInstance.getClass())) {
 
-                    appendJoins(mapKeys, childObjectInstance, builderParams, builderResult, list, newParentTable, newParentAlias, newParentChain);
+                        builderResult.append(" left join ").append(newParentTable).append(" ").append(newParentAlias);
+                        builderResult.append(" on ").append(newParentAlias).append(".").append(keyObject.getReferenced_column_name()).append(" = ");
+                        builderResult.append(parentAlias).append(".").append(keyObject.getColumn_name());
+
+                        appendJoins(mapKeys, childObjectInstance, builderParams, builderResult, list, newParentTable, newParentAlias, newParentChain);
+                    }
                 }
             }
         }

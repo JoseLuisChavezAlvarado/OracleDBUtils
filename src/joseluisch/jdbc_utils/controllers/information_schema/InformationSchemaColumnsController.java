@@ -65,12 +65,7 @@ public class InformationSchemaColumnsController {
         List<KeyColumnObject> originalList = DataInstance.getInstance().getKeyColumnObjectList();
         List<String> nodes = new ArrayList<>();
 
-        if (ReflectUtils.isNormalized(object.getClass())) {
-            nodes = ReflectUtils.getChildClases(object.getClass());
-        } else {
-            nodes.add(object.getClass().getSimpleName());
-            System.err.println("La estructura de la base de datos no  normalizada, y la tabla " + object.getClass().getSimpleName() + " o sus relaciones tienen un conflicto, no sé mostrárá la información de sus relaciones");
-        }
+        nodes = ReflectUtils.getChildClasesUpdated(object.getClass());
 
         for (String node : nodes) {
             String objectName = StringUtils.toLowerScoreCase(node);
@@ -85,7 +80,6 @@ public class InformationSchemaColumnsController {
     }
 
     //==========================================================================
-
     public static String getTableName(Object object) {
 
         List<KeyColumnObject> list = DataInstance.getInstance().getKeyColumnObjectList();
