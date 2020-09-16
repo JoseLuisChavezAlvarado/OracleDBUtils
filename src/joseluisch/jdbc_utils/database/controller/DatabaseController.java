@@ -1,25 +1,21 @@
-package joseluisch.jdbc_utils.controllers;
+package joseluisch.jdbc_utils.database.controller;
 
 import abstract_classes.ResponseObject;
 import joseluisch.jdbc_utils.database.Conexion;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import joseluisch.jdbc_utils.database.DatabseControllerTools;
 import joseluisch.jdbc_utils.utils.StringUtils;
 
 /**
  *
  * @author Jose Luis Ch.
  */
-public class DatabaseController extends DatabseControllerTools {
+public class DatabaseController extends DatabaseControllerTools {
 
     public static ResponseObject<Map<String, Object>, Exception> select(Object mObject) {
         Map<String, Object> map = null;

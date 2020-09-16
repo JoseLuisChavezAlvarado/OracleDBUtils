@@ -8,7 +8,6 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import joseluisch.jdbc_utils.entities.KeyColumnObject;
 import joseluisch.jdbc_utils.singleton.DataInstance;
 import joseluisch.jdbc_utils.utils.ReflectUtils;
 import joseluisch.jdbc_utils.utils.StringUtils;
@@ -67,21 +66,4 @@ public class InformationSchemaViewsController {
 
         return list;
     }
-
-    //==========================================================================
-    public static String getTableName(Object object) {
-
-        List<ViewObject> list = DataInstance.getInstance().getViewObjectList();
-        String className = object.getClass().getSimpleName();
-
-        for (ViewObject viewObject : list) {
-            String tableName = StringUtils.toUpperCamelCase(StringUtils.toLowerScoreCase(viewObject.getTable_name()));
-            if (tableName.equals(className)) {
-                return viewObject.getTable_name();
-            }
-        }
-
-        return null;
-    }
-
 }

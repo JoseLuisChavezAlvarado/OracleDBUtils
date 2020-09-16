@@ -7,7 +7,7 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import joseluisch.jdbc_utils.database.DatabseControllerTools;
+import joseluisch.jdbc_utils.database.controller.DatabaseControllerTools;
 import joseluisch.jdbc_utils.entities.UserTable;
 import joseluisch.jdbc_utils.utils.ReflectUtils;
 
@@ -15,7 +15,7 @@ import joseluisch.jdbc_utils.utils.ReflectUtils;
  *
  * @author Jose Luis Ch.
  */
-public class UserTableController extends DatabseControllerTools {
+public class UserTableController extends DatabaseControllerTools {
 
     public static List<UserTable> get() {
 
