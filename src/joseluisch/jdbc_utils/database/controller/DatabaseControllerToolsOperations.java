@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 import java.util.UUID;
 import joseluisch.jdbc_utils.controllers.information_schema.InformationSchemaColumnsController;
 import joseluisch.jdbc_utils.controllers.information_schema.InformationSchemaViewsController;
@@ -27,78 +26,6 @@ import joseluisch.jdbc_utils.utils.StringUtils;
  * @author Jose Luis Chavez
  */
 public class DatabaseControllerToolsOperations {
-
-    protected static void appendJoinsIterative(Map<String, String> mapKeys, Object mObject) throws Exception {
-
-        List<KeyColumnObject> list = getCompleteList(mObject);
-        Stack<Object> nodeStack = new Stack<>();
-        nodeStack.push(mObject);
-
-        StringBuilder builderParams = new StringBuilder();
-        StringBuilder builderResult = new StringBuilder();
-
-        /*
-        String tableName = InformationSchemaColumnsController.getTableName(mObject);
-        String tableAlias = StringUtils.getStringUIDD();
-
-        builderParams.append(" select  ");
-        builderResult.append(" from ").append(tableName).append(" ").append(tableAlias);
-         */
-        //======================================================================
-        String parentChain = "";
-        while (!nodeStack.empty()) {
-
-            Object selectedObject = nodeStack.pop();
-
-            String tableName = InformationSchemaColumnsController.getTableName(selectedObject);
-            String parentAlias = StringUtils.getStringUIDD();
-
-            parentChain = parentChain.concat(tableName);
-            mapKeys.put(parentChain, parentAlias);
-
-            for (int i = 0; i < list.size(); i++) {
-                if (list.get(i).getTable_name().equals(tableName)) {
-                    KeyColumnObject keyObject = list.get(i);
-
-                    String[] fields = ReflectUtils.getValidFields(selectedObject.getClass());
-                    for (String field : fields) {
-                        if (field.length() >= 26) {
-                            System.out.println("El nombre campo " + field + " es demasiado largo y producirá un error en la consulta SQL; Será omitido de la consulta. Para solucionarlo cambie el nombre del campo a una longitud menor a 27 caracteres");
-                        } else {
-                            builderParams.append(parentAlias).append(".").append(field).append(" as ").append(parentAlias).append("$").append(field).append(", ");
-                        }
-                    }
-                    
-                    // <<<<<<============================================== AQUI
-
-                    String chain = "";
-                    if (keyObject.getReferenced_table_name() != null) {
-                        String fieldType = StringUtils.toUpperCamelCase(keyObject.getReferenced_table_name());
-                        String fieldName = StringUtils.toFirstUpperCased(keyObject.getColumn_name().toLowerCase());
-                        chain = fieldType + fieldName;
-                    }
-                    
-                    String newParentAlias = StringUtils.getStringUIDD();
-                    String newParentTable = keyObject.getReferenced_table_name();
-                    String newParentChain = parentChain + " " + chain;
-
-                    if (newParentTable != null) {
-                        String childStringClass = StringUtils.toUpperCamelCase(newParentTable);
-                        Object childObjectInstance = ReflectUtils.getChildObjectInstance(mObject, childStringClass);
-
-                        if (ReflectUtils.isTableNormalized(childObjectInstance.getClass())) {
-
-                            builderResult.append(" left join ").append(newParentTable).append(" ").append(newParentAlias);
-                            builderResult.append(" on ").append(newParentAlias).append(".").append(keyObject.getReferenced_column_name()).append(" = ");
-                            builderResult.append(parentAlias).append(".").append(keyObject.getColumn_name());
-
-                            nodeStack.add(childObjectInstance);
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     protected static void appendJoins(Map<String, String> mapKeys, Object mObject, StringBuilder builderParams, StringBuilder builderResult, List<KeyColumnObject> list, String parentTable, String parentAlias, String parentChain) throws ClassNotFoundException, InstantiationException, IllegalAccessException {
 
