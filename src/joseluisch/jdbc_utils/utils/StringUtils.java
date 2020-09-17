@@ -20,7 +20,7 @@ public class StringUtils {
 
         boolean allCaps = true;
         for (int i = 0; i < value.length(); i++) {
-            if (!Character.isUpperCase(value.charAt(i))) {
+            if (!Character.isUpperCase(value.charAt(i)) && !Character.isDigit(value.charAt(i))) {
                 allCaps = false;
                 break;
             }

@@ -11,7 +11,7 @@ public class Consts {
             + "import abstract_classes.ResponseObject;\n"
             + "import security.SecurityUtils;\n"
             + "import com.google.gson.Gson;\n"
-            + "import joseluisch.jdbc_utils.controllers.DatabaseController;\n"
+            + "import joseluisch.jdbc_utils.database.controller.DatabaseController;\n"
             + "import javax.ws.rs.Consumes;\n"
             + "import javax.ws.rs.DELETE;\n"
             + "import javax.ws.rs.HeaderParam;\n"

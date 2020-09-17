@@ -76,6 +76,14 @@ public class InformationSchemaColumnsController {
             }
         }
 
+        if (list.isEmpty()) {
+            String tableName = StringUtils.toLowerScoreCase(object.getClass().getSimpleName());
+            System.err.println("La tabla " + tableName + " no tiene asignado una PRIMARY KEY");
+            KeyColumnObject columnObject = new KeyColumnObject();
+            columnObject.setTable_name(tableName);
+            list.add(columnObject);
+        }
+
         return list;
     }
 
