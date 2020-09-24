@@ -14,9 +14,11 @@ import java.util.Map;
 import java.util.UUID;
 import joseluisch.jdbc_utils.controllers.information_schema.InformationSchemaColumnsController;
 import joseluisch.jdbc_utils.controllers.information_schema.InformationSchemaViewsController;
+import joseluisch.jdbc_utils.database.DatabaseInstance;
 import joseluisch.jdbc_utils.entities.KeyColumnObject;
 import joseluisch.jdbc_utils.entities.TableDetails;
 import joseluisch.jdbc_utils.entities.ViewObject;
+import joseluisch.jdbc_utils.entities.VwMultivaluada;
 import joseluisch.jdbc_utils.singleton.DataInstance;
 import joseluisch.jdbc_utils.utils.ReflectUtils;
 import joseluisch.jdbc_utils.utils.StringUtils;
@@ -64,13 +66,37 @@ public class DatabaseControllerToolsOperations {
                     String childStringClass = StringUtils.toUpperCamelCase(newParentTable);
                     Object childObjectInstance = ReflectUtils.getChildObjectInstance(mObject, childStringClass);
 
-                    if (ReflectUtils.isTableNormalized(childObjectInstance.getClass())) {
+                    if (childObjectInstance != null && ReflectUtils.isTableNormalized(childObjectInstance.getClass())) {
 
                         builderResult.append(" left join ").append(newParentTable).append(" ").append(newParentAlias);
                         builderResult.append(" on ").append(newParentAlias).append(".").append(keyObject.getReferenced_column_name()).append(" = ");
                         builderResult.append(parentAlias).append(".").append(keyObject.getColumn_name());
 
                         appendJoins(mapKeys, childObjectInstance, builderParams, builderResult, list, newParentTable, newParentAlias, newParentChain);
+                    }
+                }
+            }
+        }
+
+        if (DatabaseInstance.getInstance().getMul()) {
+            List<VwMultivaluada> vwMultivaluadaList = DataInstance.getInstance().getVwMultivaluadaList();
+            String[] fields = ReflectUtils.getValidFields(mObject.getClass());
+
+            for (VwMultivaluada mul : vwMultivaluadaList) {
+                if (mul.getLta_nom_tabla().equals(parentTable)) {
+                    for (String field : fields) {
+                        if (field.equalsIgnoreCase(mul.getLta_nom_campo())) {
+                            String tableAlias = StringUtils.getStringUIDD();
+                            String mulChain = parentChain + " " + StringUtils.toFirstUpperCased(field) + "_mul";
+                            mapKeys.put(mulChain, tableAlias);
+                            builderParams.append(tableAlias).append(".eta_cve").append(" as ").append(tableAlias).append("$eta_cve").append(", ");
+                            builderParams.append(tableAlias).append(".tab_cve").append(" as ").append(tableAlias).append("$tab_cve").append(", ");
+                            builderParams.append(tableAlias).append(".eta_desc").append(" as ").append(tableAlias).append("$eta_desc").append(", ");
+                            builderParams.append(tableAlias).append(".lta_nom_campo").append(" as ").append(tableAlias).append("$lta_nom_campo").append(", ");
+                            builderParams.append(tableAlias).append(".lta_nom_tabla").append(" as ").append(tableAlias).append("$lta_nom_tabla").append(", ");
+                            builderResult.append(" left join vw_multivaluada ").append(tableAlias).append(" on ").append(tableAlias).append(".lta_nom_tabla = '").append(parentTable).append("' and ").append(tableAlias).append(".lta_nom_campo = '").append(field.toUpperCase()).append("' and ").append(tableAlias).append(".eta_cve = ").append(parentAlias).append(".").append(field);
+                            break;
+                        }
                     }
                 }
             }
@@ -171,47 +197,45 @@ public class DatabaseControllerToolsOperations {
 
                 Object referencedObject = getReferencedObject(newObject, key);
 
-                if (ReflectUtils.isTableNormalized(referencedObject.getClass())) {
-                    if (referencedObject != null && referencedObject != newObject) {
-                        for (Field field : referencedObject.getClass().getDeclaredFields()) {
-                            field.setAccessible(true);
-                            if (ReflectUtils.isValidField(field)) {
+                if (referencedObject != null && referencedObject != newObject && ReflectUtils.isTableNormalized(referencedObject.getClass())) {
+                    for (Field field : referencedObject.getClass().getDeclaredFields()) {
+                        field.setAccessible(true);
+                        if (ReflectUtils.isValidField(field)) {
 
-                                Object val = null;
-                                for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
-                                    if (resultSet.getMetaData().getColumnLabel(i).toLowerCase().contains(field.getName().toLowerCase())) {
-                                        if (resultSet.getMetaData().getColumnType(i) == Types.TIMESTAMP) {
-                                            try {
-                                                val = resultSet.getTimestamp(value + "$" + field.getName());
-                                                val = val != null ? ((Timestamp) val).getTime() : 0L;
-                                            } catch (Exception e) {
-                                            }
-                                            break;
-                                        } else if (resultSet.getMetaData().getColumnType(i) == Types.DATE) {
-                                            try {
-                                                val = resultSet.getDate(value + "$" + field.getName());
-                                                val = val != null ? ((Timestamp) val).getTime() : 0L;
-                                            } catch (Exception e) {
-                                            }
-                                            break;
-                                        } else if (resultSet.getMetaData().getColumnType(i) == Types.NUMERIC) {
-                                            if (resultSet.getMetaData().getColumnClassName(i).equals("java.math.BigDecimal")) {
-                                                val = resultSet.getInt(value + "$" + field.getName());
-                                            }
-                                            break;
+                            Object val = null;
+                            for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
+                                if (resultSet.getMetaData().getColumnLabel(i).toLowerCase().contains(field.getName().toLowerCase())) {
+                                    if (resultSet.getMetaData().getColumnType(i) == Types.TIMESTAMP) {
+                                        try {
+                                            val = resultSet.getTimestamp(value + "$" + field.getName());
+                                            val = val != null ? ((Timestamp) val).getTime() : 0L;
+                                        } catch (Exception e) {
                                         }
+                                        break;
+                                    } else if (resultSet.getMetaData().getColumnType(i) == Types.DATE) {
+                                        try {
+                                            val = resultSet.getDate(value + "$" + field.getName());
+                                            val = val != null ? ((Timestamp) val).getTime() : 0L;
+                                        } catch (Exception e) {
+                                        }
+                                        break;
+                                    } else if (resultSet.getMetaData().getColumnType(i) == Types.NUMERIC) {
+                                        if (resultSet.getMetaData().getColumnClassName(i).equals("java.math.BigDecimal")) {
+                                            val = resultSet.getInt(value + "$" + field.getName());
+                                        }
+                                        break;
                                     }
                                 }
+                            }
 
-                                if (field.getName().length() < 26) {
-                                    val = val == null ? resultSet.getObject(value + "$" + field.getName()) : val;
-                                }
+                            if (field.getName().length() < 26) {
+                                val = val == null ? resultSet.getObject(value + "$" + field.getName()) : val;
+                            }
 
-                                try {
-                                    field.set(referencedObject, val);
-                                } catch (Exception e) {
-                                    field.set(referencedObject, val.toString());
-                                }
+                            try {
+                                field.set(referencedObject, val);
+                            } catch (Exception e) {
+                                field.set(referencedObject, val.toString());
                             }
                         }
                     }
@@ -313,6 +337,7 @@ public class DatabaseControllerToolsOperations {
         if (selectedKey != null) {
 
             try {
+
                 Method fieldGetter = mObject.getClass().getMethod("get" + selectedKey);
                 Object newObject = fieldGetter.invoke(mObject);
 
@@ -324,7 +349,11 @@ public class DatabaseControllerToolsOperations {
                 return getReferencedObject(newObject, builder.toString().trim());
 
             } catch (NoSuchMethodException ex) {
-                ex.printStackTrace();
+                if (selectedKey.contains("_mul")) {
+                    System.err.println("La multivaluada " + selectedKey + " no está declarada en el entity");
+                } else {
+                    ex.printStackTrace();
+                }
                 return null;
             }
         }

@@ -7,11 +7,13 @@ import java.util.List;
 import java.util.Map;
 import joseluisch.jdbc_utils.controllers.DatabaseConfigController;
 import joseluisch.jdbc_utils.controllers.UserTableController;
+import joseluisch.jdbc_utils.controllers.WMultivluadaController;
 import joseluisch.jdbc_utils.controllers.information_schema.InformationSchemaColumnsController;
 import joseluisch.jdbc_utils.controllers.information_schema.InformationSchemaViewsController;
 import joseluisch.jdbc_utils.entities.KeyColumnObject;
 import joseluisch.jdbc_utils.entities.TableDetails;
 import joseluisch.jdbc_utils.entities.ViewObject;
+import joseluisch.jdbc_utils.entities.VwMultivaluada;
 
 /**
  *
@@ -23,6 +25,7 @@ public class DataInstance {
 
     private Map<String, List<TableDetails>> tableDetailsMap;
     private List<KeyColumnObject> keyColumnObjectList;
+    private List<VwMultivaluada> vwMultivaluadaList;
     private List<ViewObject> viewObjectList;
     private List<UserTable> userTablesList;
 
@@ -71,6 +74,13 @@ public class DataInstance {
             userTablesList = UserTableController.get();
         }
         return userTablesList;
+    }
+
+    public List<VwMultivaluada> getVwMultivaluadaList() {
+        if (vwMultivaluadaList == null || vwMultivaluadaList.isEmpty()) {
+            vwMultivaluadaList = WMultivluadaController.get();
+        }
+        return vwMultivaluadaList;
     }
 
 }

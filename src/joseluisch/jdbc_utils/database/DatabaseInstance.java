@@ -8,11 +8,12 @@ public class DatabaseInstance {
 
     private static DatabaseInstance instance;
 
-    private static String connectionUrl;
-    private static String password;
-    private static boolean oracle;
-    private static String user;
-    private static String jndi;
+    private String connectionUrl;
+    private String password;
+    private String user;
+    private String jndi;
+    private Boolean oracle;
+    private Boolean mul;
 
     public static DatabaseInstance getInstance() {
         if (instance == null) {
@@ -21,59 +22,75 @@ public class DatabaseInstance {
         return instance;
     }
 
-    public static void init(String JNDI) {
+    public void init(String JNDI) {
+        init(JNDI, false);
+    }
+
+    public void init(String JNDI, boolean mul) {
         getInstance().setJndi(JNDI);
+        getInstance().setMul(mul);
     }
 
-    public static void init(String connectionUrl, String user, String password) {
-        init(connectionUrl, user, password, false);
+    public void init(String connectionUrl, String user, String password) {
+        init(connectionUrl, user, password, false, false);
     }
 
-    public static void init(String connectionUrl, String user, String password, boolean oracleDB) {
+    public void init(String connectionUrl, String user, String password, Boolean oracleDB, Boolean mul) {
         getInstance().setConnectionUrl(connectionUrl);
         getInstance().setPassword(password);
         getInstance().setOracle(oracleDB);
         getInstance().setUser(user);
+        getInstance().setMul(mul);
     }
 
-    public static String getJndi() {
-        return jndi;
-    }
-
-    private static void setJndi(String jndi) {
-        DatabaseInstance.jndi = jndi;
-    }
-
-    public static String getConnectionUrl() {
+    public String getConnectionUrl() {
         return connectionUrl;
     }
 
-    public static void setConnectionUrl(String connectionUrl) {
-        DatabaseInstance.connectionUrl = connectionUrl;
+    public void setConnectionUrl(String connectionUrl) {
+        this.connectionUrl = connectionUrl;
     }
 
-    public static String getPassword() {
+    public String getPassword() {
         return password;
     }
 
-    public static void setPassword(String password) {
-        DatabaseInstance.password = password;
+    public void setPassword(String password) {
+        this.password = password;
     }
 
-    public static String getUser() {
+    public String getUser() {
         return user;
     }
 
-    public static void setUser(String user) {
-        DatabaseInstance.user = user;
+    public void setUser(String user) {
+        this.user = user;
     }
 
-    public static boolean isOracle() {
+    public String getJndi() {
+        return jndi;
+    }
+
+    public void setJndi(String jndi) {
+        this.jndi = jndi;
+    }
+
+    public Boolean getOracle() {
         return oracle;
     }
 
-    public static void setOracle(boolean oracle) {
-        DatabaseInstance.oracle = oracle;
+    public void setOracle(Boolean oracle) {
+        this.oracle = oracle;
     }
+
+    public Boolean getMul() {
+        return mul;
+    }
+
+    public void setMul(Boolean mul) {
+        this.mul = mul;
+    }
+
+   
 
 }

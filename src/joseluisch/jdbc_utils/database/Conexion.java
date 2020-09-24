@@ -18,8 +18,8 @@ public class Conexion {
 
     private Connection conn = null;
 
-    private final boolean WEBLOGIC_DB = DatabaseInstance.getInstance().isOracle();
-    private final String CONNECTION_URL = DatabaseInstance.getConnectionUrl();
+    private final String CONNECTION_URL = DatabaseInstance.getInstance().getConnectionUrl();
+    private final Boolean WEBLOGIC_DB = DatabaseInstance.getInstance().getOracle();
     private final String PASSWORD = DatabaseInstance.getInstance().getPassword();
     private final String USER = DatabaseInstance.getInstance().getUser();
     private final String JNDI = DatabaseInstance.getInstance().getJndi();

@@ -258,7 +258,7 @@ public class ReflectUtils {
                     field.setAccessible(true);
                     if (!isValidField(field)) {
                         Class fieldClass = field.getType();
-                        if (isClass(fieldClass.getName())) {
+                        if (!isValidField(field) && isClass(fieldClass.getName())) {
                             boolean isAdded = false;
                             for (String className : set) {
                                 if (className.equals(fieldClass.getSimpleName())) {
