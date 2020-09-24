@@ -1,6 +1,5 @@
 package joseluisch.jdbc_utils.singleton;
 
-import joseluisch.jdbc_utils.entities.UserTable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +11,7 @@ import joseluisch.jdbc_utils.controllers.information_schema.InformationSchemaCol
 import joseluisch.jdbc_utils.controllers.information_schema.InformationSchemaViewsController;
 import joseluisch.jdbc_utils.entities.KeyColumnObject;
 import joseluisch.jdbc_utils.entities.TableDetails;
+import joseluisch.jdbc_utils.entities.UserTable;
 import joseluisch.jdbc_utils.entities.ViewObject;
 import joseluisch.jdbc_utils.entities.VwMultivaluada;
 

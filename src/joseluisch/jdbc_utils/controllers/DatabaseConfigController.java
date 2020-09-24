@@ -1,11 +1,11 @@
 package joseluisch.jdbc_utils.controllers;
 
-import joseluisch.jdbc_utils.database.Conexion;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.HashMap;
 import java.util.Map;
+import joseluisch.jdbc_utils.database.Conexion;
 import joseluisch.jdbc_utils.entities.TableDetails;
 
 /**
