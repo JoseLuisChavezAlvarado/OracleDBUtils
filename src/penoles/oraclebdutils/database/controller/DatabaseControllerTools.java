@@ -63,26 +63,26 @@ public class DatabaseControllerTools extends DatabaseControllerToolsOperations {
     protected static String addSQL(Object mObject) throws IllegalArgumentException, IllegalAccessException, ClassNotFoundException {
 
         String table_name = InformationSchemaColumnsController.getTableName(mObject);
-        StringBuilder builder = new StringBuilder();
         StringBuilder builderValues = new StringBuilder();
+        StringBuilder builder = new StringBuilder();
+        String fieldId = getFieldId(mObject);
 
-        builder.append(" insert into ").append(table_name).append(" ( ");
-        builderValues.append(" values ( ");
+        builder.append(" insert into ").append(table_name).append(" ( ").append(fieldId).append(", ");
+        builderValues.append(" values (?,");
 
         for (Field f : mObject.getClass().getDeclaredFields()) {
             f.setAccessible(true);
             Object o = f.get(mObject);
 
-            if (o != null) {
-                if (ReflectUtils.isValidField(f)) {
-                    builder.append(f.getName()).append(",");
-                    builderValues.append("?,");
-                }
+            if (o != null && !f.getName().equals(fieldId) && ReflectUtils.isValidField(f)) {
+                builder.append(f.getName()).append(",");
+                builderValues.append("?,");
             }
         }
 
         builderValues = builderValues.replace(builderValues.length() - 1, builderValues.length(), "");
         builder = builder.replace(builder.length() - 1, builder.length(), "");
+
         builderValues.append(")");
         builder.append(")");
 
@@ -148,31 +148,29 @@ public class DatabaseControllerTools extends DatabaseControllerToolsOperations {
         }
     }
 
-    protected static void prepareStatementInsert(PreparedStatement ps, Object mObject) throws IllegalArgumentException, IllegalAccessException, SQLException {
+    protected static void prepareStatementInsert(PreparedStatement ps, Object mObject) throws IllegalArgumentException, IllegalAccessException, SQLException, NoSuchFieldException {
 
         String tableName = InformationSchemaColumnsController.getTableName(mObject);
         List<TableDetails> list = DataInstance.getInstance().getTableDetailsList(tableName);
+        String fieldId = getFieldId(mObject);
 
-        fillId(mObject);
-        Class aClass = mObject.getClass();
+        Object idVal = fillId(mObject);
+        ps.setObject(1, idVal);
 
-        int index = 1;
-        for (Field f : aClass.getDeclaredFields()) {
-            f.setAccessible(true);
-            Object fieldValue = f.get(mObject);
-            if (fieldValue != null && ReflectUtils.isValidField(f)) {
-
+        int index = 2;
+        for (Field field : mObject.getClass().getDeclaredFields()) {
+            field.setAccessible(true);
+            Object fieldValue = field.get(mObject);
+            if (fieldValue != null && !field.getName().equals(fieldId) && ReflectUtils.isValidField(field)) {
                 boolean isDate = false;
                 for (TableDetails details : list) {
-                    if (f.getName().equalsIgnoreCase(details.getField())) {
-                        if (details.getType().toLowerCase().contains("date") || details.getType().toLowerCase().contains("timestamp")) {
-                            isDate = Boolean.TRUE;
-                            break;
-                        }
+                    if (field.getName().equalsIgnoreCase(details.getField()) && (details.getType().toLowerCase().contains("date") || details.getType().toLowerCase().contains("timestamp"))) {
+                        isDate = Boolean.TRUE;
+                        break;
                     }
                 }
 
-                if (isDate && Long.class.getSimpleName().equals(f.getType().getSimpleName())) {
+                if (isDate && Long.class.getSimpleName().equals(field.getType().getSimpleName())) {
                     ps.setObject(index++, new Date((long) fieldValue));
                 } else {
                     ps.setObject(index++, fieldValue);
@@ -205,10 +203,12 @@ public class DatabaseControllerTools extends DatabaseControllerToolsOperations {
                         if (f.getName().equalsIgnoreCase(details.getField()) && (details.getType().toLowerCase().contains("date") || details.getType().toLowerCase().contains("timestamp"))) {
                             isDate = Boolean.TRUE;
                             break;
+
                         }
                     }
 
-                    if (isDate && Long.class.getSimpleName().equals(f.getType().getSimpleName())) {
+                    if (isDate && Long.class
+                            .getSimpleName().equals(f.getType().getSimpleName())) {
                         ps.setObject(index++, new Date((long) fieldValue));
                     } else {
                         ps.setObject(index++, fieldValue);

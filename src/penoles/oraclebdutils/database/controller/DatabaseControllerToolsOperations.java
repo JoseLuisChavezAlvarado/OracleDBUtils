@@ -251,7 +251,7 @@ public class DatabaseControllerToolsOperations {
         return map;
     }
 
-    protected static void fillId(Object object) throws IllegalArgumentException, IllegalAccessException {
+    protected static Object fillId(Object object) throws IllegalArgumentException, IllegalAccessException {
         List<KeyColumnObject> list = DataInstance.getInstance().getKeyColumnObjectList();
         String className = object.getClass().getSimpleName();
 
@@ -300,7 +300,7 @@ public class DatabaseControllerToolsOperations {
 
                                 }
 
-                                field.set(object, id);
+                                return id;
 
                             } else if (field.getType().getSimpleName().equals(Integer.class
                                     .getSimpleName())) {
@@ -308,16 +308,17 @@ public class DatabaseControllerToolsOperations {
                                 Map<String, Object> map = DatabaseController.excecuteQuery(sql, null);
                                 for (Map.Entry entry : map.entrySet()) {
                                     Map<String, Object> m = (Map<String, Object>) entry.getValue();
-                                    field.set(object, Integer.valueOf(m.get("MAX").toString()));
-                                    break;
+                                    Integer idValue = Integer.valueOf(m.get("MAX").toString());
+                                    field.set(object, idValue);
+                                    return idValue;
                                 }
                             }
-                            return;
                         }
                     }
                 }
             }
         }
+        return null;
     }
 
     //==========================================================================
