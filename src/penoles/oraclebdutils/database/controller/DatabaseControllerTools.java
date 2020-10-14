@@ -45,6 +45,7 @@ public class DatabaseControllerTools extends DatabaseControllerToolsOperations {
         for (KeyColumnObject keyObject : columnObjects) {
             if (StringUtils.toLowerScoreCase(keyObject.getTable_name()).equalsIgnoreCase(objectName)) {
                 parentTable = keyObject.getTable_name();
+                break;
             }
         }
 
@@ -136,14 +137,28 @@ public class DatabaseControllerTools extends DatabaseControllerToolsOperations {
     //==========================================================================
     protected static void prepareStatementSelect(PreparedStatement ps, Object mObject) throws IllegalArgumentException, IllegalAccessException, SQLException {
 
-        Class aClass = mObject.getClass();
+        String tableName = InformationSchemaColumnsController.getTableName(mObject);
+        List<TableDetails> list = DataInstance.getInstance().getTableDetailsList(tableName);
 
         int index = 1;
-        for (Field f : aClass.getDeclaredFields()) {
-            f.setAccessible(true);
-            Object object = f.get(mObject);
-            if (object != null && ReflectUtils.isValidField(f)) {
-                ps.setObject(index++, object);
+        for (Field field : mObject.getClass().getDeclaredFields()) {
+            field.setAccessible(true);
+            Object fieldValue = field.get(mObject);
+            if (fieldValue != null && ReflectUtils.isValidField(field)) {
+                boolean isDate = false;
+                for (TableDetails details : list) {
+                    if (field.getName().equalsIgnoreCase(details.getField()) && (details.getType().toLowerCase().contains("date") || details.getType().toLowerCase().contains("timestamp"))) {
+                        isDate = Boolean.TRUE;
+                        break;
+                    }
+                }
+
+                if (isDate && Long.class.getSimpleName().equals(field.getType().getSimpleName())) {
+                    ps.setObject(index++, new Date(Long.valueOf(fieldValue.toString())));
+                } else {
+                    ps.setObject(index++, fieldValue);
+                }
+
             }
         }
     }

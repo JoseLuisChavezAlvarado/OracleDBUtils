@@ -1,7 +1,9 @@
 package penoles.oraclebdutils.utils;
 
+import java.io.Console;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
@@ -70,15 +72,19 @@ public class StringUtils {
     }
 
     public static String getStringUIDD() {
-        String s = UUID.randomUUID().toString();
-        s = s.replace("-", "");
-        s = s.substring(s.length() - 3, s.length());
-        if (Character.isDigit(s.charAt(0))) {
-            Random r = new Random();
-            char c = (char) (r.nextInt(26) + 'a');
-            s = c + s;
-        }
-        return s;
+        /*String uuid = UUID.randomUUID().toString();
+        uuid = uuid.substring(uuid.length() - 3, uuid.length());
+        //if (Character.isDigit(s.charAt(0))) {
+        Random r = new Random();
+        char c = (char) (r.nextInt(26) + 'a');
+        uuid = c + uuid;
+        //}
+        return uuid;*/
+        String uuid = randomString(4);
+        Random r = new Random();
+        char c = (char) (r.nextInt(26) + 'a');
+        uuid = c + uuid;
+        return uuid.toLowerCase();
     }
 
     public static String toLowerCamelCase(String s) {
@@ -130,15 +136,34 @@ public class StringUtils {
     }
 
     public static void main(String[] args) {
-        int sum = 0;
-        int times = 100;
 
-        for (int i = 0; i < times; i++) {
-            sum += getListTest(times);
+        int number = 50;
+        int times = 10000;
+
+        int suma = 0;
+        for (int j = 0; j < times; j++) {
+
+            Set<String> set = new HashSet<>();
+            for (int i = 0; i < number; i++) {
+                set.add(getStringUIDD());
+            }
+
+            int duplicados = number - set.size();
+            //System.out.println("Duplicados = " + duplicados);
+            suma += duplicados;
         }
 
-        System.out.println("Promedio: " + sum / times);
+        System.err.println("Total de errores:" + suma);
+    }
 
+    static String randomString(int len) {
+        String AB = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        Random rnd = new Random();
+        StringBuilder sb = new StringBuilder(len);
+        for (int i = 0; i < len; i++) {
+            sb.append(AB.charAt(rnd.nextInt(AB.length())));
+        }
+        return sb.toString().toLowerCase();
     }
 
     private static int getListTest(int iterations) {

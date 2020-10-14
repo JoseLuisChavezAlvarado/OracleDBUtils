@@ -1,6 +1,7 @@
 package penoles.oraclebdutils.utils;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -63,12 +64,12 @@ public class ReflectUtils {
         for (Field field : objectClass.getDeclaredFields()) {
             field.setAccessible(true);
 
-            if (field.getType().getSimpleName().equalsIgnoreCase(String.class.getSimpleName())
+            if (!Modifier.isTransient(field.getModifiers())
+                    && (field.getType().getSimpleName().equalsIgnoreCase(String.class.getSimpleName())
                     || field.getType().getSimpleName().equalsIgnoreCase(Double.class.getSimpleName())
                     || field.getType().getSimpleName().equalsIgnoreCase(Long.class.getSimpleName())
                     || field.getType().getSimpleName().equalsIgnoreCase(Boolean.class.getSimpleName())
-                    || field.getType().getSimpleName().equalsIgnoreCase(Integer.class.getSimpleName())) {
-
+                    || field.getType().getSimpleName().equalsIgnoreCase(Integer.class.getSimpleName()))) {
                 list.add(field.getName());
             }
         }
@@ -154,11 +155,12 @@ public class ReflectUtils {
     }
 
     public static boolean isValidField(Field field) {
-        return field.getType().getSimpleName().equalsIgnoreCase(String.class.getSimpleName())
+        return !Modifier.isTransient(field.getModifiers())
+                && (field.getType().getSimpleName().equalsIgnoreCase(String.class.getSimpleName())
                 || field.getType().getSimpleName().equalsIgnoreCase(Double.class.getSimpleName())
                 || field.getType().getSimpleName().equalsIgnoreCase(Long.class.getSimpleName())
                 || field.getType().getSimpleName().equalsIgnoreCase(Boolean.class.getSimpleName())
-                || field.getType().getSimpleName().equalsIgnoreCase(Integer.class.getSimpleName());
+                || field.getType().getSimpleName().equalsIgnoreCase(Integer.class.getSimpleName()));
     }
 
     //==========================================================================

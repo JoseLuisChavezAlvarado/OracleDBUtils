@@ -1,6 +1,6 @@
 package penoles.oraclebdutils.database.controller;
 
-import penoles.oraclebdutils.abstract_classes.ResponseObject;
+import penoles.oraclebdutils.abstractclasses.ResponseObject;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.HashMap;

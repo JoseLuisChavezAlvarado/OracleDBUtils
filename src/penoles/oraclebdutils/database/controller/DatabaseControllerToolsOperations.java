@@ -55,7 +55,7 @@ public class DatabaseControllerToolsOperations {
 
                 String[] fields = ReflectUtils.getValidFields(mObject.getClass());
                 for (String field : fields) {
-                    if (field.length() >= 26) {
+                    if (field.length() >= 25) {
                         System.out.println("El nombre campo " + field + " es demasiado largo y producirá un error en la consulta SQL; Será omitido de la consulta. Para solucionarlo cambie el nombre del campo a una longitud menor a 27 caracteres");
                     } else {
                         field = field.replace("$", "#");
@@ -117,7 +117,7 @@ public class DatabaseControllerToolsOperations {
             }
         }
 
-        builder.append(" WHERE 1 = 1 ");
+        builder.append(" WHERE 0 = 0 ");
         String key = mapKeys.get(parentTable);
 
         for (Field f : mObject.getClass().getDeclaredFields()) {
@@ -125,7 +125,7 @@ public class DatabaseControllerToolsOperations {
             Object o = f.get(mObject);
 
             if (o != null && ReflectUtils.isValidField(f)) {
-                builder.append(" AND ").append(key).append(".").append(f.getName()).append(" like ?");
+                builder.append(" AND ").append(key).append(".").append(f.getName()).append(" = ?");
             }
         }
     }
@@ -181,7 +181,7 @@ public class DatabaseControllerToolsOperations {
                         }
                     }
 
-                    if (field.getName().length() < 26) {
+                    if (field.getName().length() < 25) {
                         String name = field.getName().replace("$", "#");
                         value = value == null ? resultSet.getObject(parenValue + "$" + name) : value;
                     }
@@ -231,7 +231,7 @@ public class DatabaseControllerToolsOperations {
                                 }
                             }
 
-                            if (field.getName().length() < 26) {
+                            if (field.getName().length() < 25) {
                                 val = val == null ? resultSet.getObject(value + "$" + field.getName()) : val;
                             }
 
