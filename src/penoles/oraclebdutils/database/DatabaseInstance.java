@@ -91,6 +91,4 @@ public class DatabaseInstance {
         this.mul = mul;
     }
 
-   
-
 }

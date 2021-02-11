@@ -1,6 +1,5 @@
 package penoles.oraclebdutils.utils;
 
-import java.io.Console;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -8,7 +7,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  *

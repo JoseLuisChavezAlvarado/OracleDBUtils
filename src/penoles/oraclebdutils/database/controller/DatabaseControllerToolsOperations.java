@@ -8,17 +8,16 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import penoles.oraclebdutils.information_schema.InformationSchemaColumnsController;
-import penoles.oraclebdutils.information_schema.InformationSchemaViewsController;
 import penoles.oraclebdutils.database.DatabaseInstance;
 import penoles.oraclebdutils.entities.KeyColumnObject;
 import penoles.oraclebdutils.entities.TableDetails;
 import penoles.oraclebdutils.entities.ViewObject;
 import penoles.oraclebdutils.entities.VwMultivaluada;
+import penoles.oraclebdutils.information_schema.InformationSchemaColumnsController;
+import penoles.oraclebdutils.information_schema.InformationSchemaViewsController;
 import penoles.oraclebdutils.singleton.DataInstance;
 import penoles.oraclebdutils.utils.ReflectUtils;
 import penoles.oraclebdutils.utils.StringUtils;
@@ -28,6 +27,8 @@ import penoles.oraclebdutils.utils.StringUtils;
  * @author Jose Luis Chavez
  */
 public class DatabaseControllerToolsOperations {
+
+    private static final Integer PAGE_LENGTH = 25;
 
     protected static void appendJoins(Map<String, String> mapKeys, Object mObject, StringBuilder builderParams, StringBuilder builderResult, List<KeyColumnObject> list, String parentTable, String parentAlias, String parentChain) throws ClassNotFoundException, InstantiationException, IllegalAccessException {
 
@@ -45,7 +46,8 @@ public class DatabaseControllerToolsOperations {
 
                 if (keyObject.getReferenced_table_name() != null) {
                     fieldType = StringUtils.toUpperCamelCase(keyObject.getReferenced_table_name());
-                    fieldName = StringUtils.toFirstUpperCased(keyObject.getColumn_name().toLowerCase());
+                    //fieldName = StringUtils.toFirstUpperCased(keyObject.getColumn_name().toLowerCase());
+                    fieldName = keyObject.getColumn_name();
                     chain = fieldType + fieldName;
                 }
 
@@ -64,6 +66,7 @@ public class DatabaseControllerToolsOperations {
                 }
 
                 if (newParentTable != null) {
+
                     String childStringClass = StringUtils.toUpperCamelCase(newParentTable);
                     Object childObjectInstance = ReflectUtils.getChildObjectInstance(mObject, childStringClass);
 
@@ -104,36 +107,79 @@ public class DatabaseControllerToolsOperations {
         }
     }
 
-    protected static void appendWheres(Map<String, String> mapKeys, Object mObject, StringBuilder builder) throws IllegalArgumentException, IllegalAccessException {
-
-        List<KeyColumnObject> columnObjects = InformationSchemaColumnsController.get(mObject);
-        String objectName = StringUtils.toLowerScoreCase(mObject.getClass().getSimpleName());
-
-        String parentTable = null;
-        for (KeyColumnObject keyObject : columnObjects) {
-            if (StringUtils.toLowerScoreCase(keyObject.getTable_name()).equalsIgnoreCase(objectName)) {
-                parentTable = keyObject.getTable_name();
-                break;
-            }
-        }
+    protected static void appendWheres(Map<String, String> mapKeys, Object mObject, StringBuilder builder, String parentTable, String filterVariable, boolean equals) throws IllegalArgumentException, IllegalAccessException, InvocationTargetException, NoSuchMethodException, InstantiationException {
 
         builder.append(" WHERE 0 = 0 ");
-        String key = mapKeys.get(parentTable);
 
-        for (Field f : mObject.getClass().getDeclaredFields()) {
-            f.setAccessible(true);
-            Object o = f.get(mObject);
+        appendObjectFileds(mapKeys, mObject, builder, equals);
 
-            if (o != null && ReflectUtils.isValidField(f)) {
-                builder.append(" AND ").append(key).append(".").append(f.getName()).append(" = ?");
+        String fieldId = getFieldId(mObject);
+        String value = mapKeys.get(parentTable);
+
+        if (filterVariable != null && !filterVariable.isEmpty()) {
+
+            if (filterVariable.contains(".")) {
+                String key = filterVariable.split("\\.")[0];
+                String param = filterVariable.split("\\.")[1];
+
+                String newKey = parentTable + " " + key;
+
+                for (Map.Entry entry : mapKeys.entrySet()) {
+                    String entryKey = entry.getKey().toString();
+                    if (entryKey.equalsIgnoreCase(newKey)) {
+                        value = entry.getValue().toString();
+                    }
+                }
+
+                builder.append(" ORDER BY ").append(value).append(".").append(param);
+            } else {
+                builder.append(" ORDER BY ").append(value).append(".").append(filterVariable);
+            }
+        } else if (fieldId != null) {
+            builder.append(" ORDER BY ").append(value).append(".").append(fieldId);
+        }
+
+    }
+
+    protected static void appendObjectFileds(Map<String, String> mapKeys, Object mObject, StringBuilder builder, boolean equals) throws IllegalArgumentException, IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
+
+        for (Map.Entry entry : mapKeys.entrySet()) {
+            String key = entry.getKey().toString();
+            String value = entry.getValue().toString();
+
+            Object referencedObject = getReferencedObject(mObject, key);
+
+            if (referencedObject != null) {
+                for (Field field : referencedObject.getClass().getDeclaredFields()) {
+                    field.setAccessible(true);
+                    if (ReflectUtils.isValidField(field)) {
+                        Object o = field.get(referencedObject);
+                        if (o != null) {
+                            if (field.getType().getSimpleName().equalsIgnoreCase(String.class.getSimpleName()) && !equals) {
+                                builder.append(" AND ").append(value).append(".").append(field.getName()).append(" like ?");
+                            } else {
+                                builder.append(" AND ").append(value).append(".").append(field.getName()).append(" = ?");
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 
-    //==========================================================================
-    protected static Map<String, Object> fillResultSet(ResultSet resultSet, Object mObject, Map<String, String> mapKeys) throws InstantiationException, IllegalArgumentException, IllegalAccessException, SQLException, InvocationTargetException, NoSuchMethodException {
+    private static void appendLimit(StringBuilder builderResult, Integer page, Integer pageLength) {
+        if (page != null) {
+            pageLength = pageLength != null ? pageLength : PAGE_LENGTH;
+            int ini = (page - 1) * pageLength;
 
-        Map<String, Object> map = new HashMap<>();
+            builderResult.append(" limit ").append(ini).append(", ").append(pageLength).append(" ");
+        }
+    }
+
+    //==========================================================================
+    protected static List<Object> fillResultSet(ResultSet resultSet, Object mObject, Map<String, String> mapKeys) throws InstantiationException, IllegalArgumentException, IllegalAccessException, SQLException, InvocationTargetException, NoSuchMethodException {
+
+        List<Object> list = new ArrayList<>();
         String parenValue = null;
 
         String loweScoreClassName = StringUtils.toLowerScoreCase(mObject.getClass().getSimpleName());
@@ -245,10 +291,10 @@ public class DatabaseControllerToolsOperations {
                 }
             }
 
-            map.put(newObject.toString(), newObject);
+            list.add(newObject);
         }
 
-        return map;
+        return list;
     }
 
     protected static Object fillId(Object object) throws IllegalArgumentException, IllegalAccessException {

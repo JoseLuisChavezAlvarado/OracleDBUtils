@@ -50,7 +50,7 @@ public class Conexion {
             c = getConexion();
             result = true;
         } catch (Exception e) {
-            e.printStackTrace();
+            //e.printStackTrace();
         } finally {
             try {
                 c.close();
