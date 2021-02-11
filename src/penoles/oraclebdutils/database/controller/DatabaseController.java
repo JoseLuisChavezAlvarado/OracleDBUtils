@@ -1,13 +1,15 @@
 package penoles.oraclebdutils.database.controller;
 
-import penoles.oraclebdutils.abstractclasses.ResponseObject;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
+import penoles.oraclebdutils.abstractclasses.ResponseObject;
 import penoles.oraclebdutils.database.Conexion;
 import penoles.oraclebdutils.utils.StringUtils;
 
@@ -17,8 +19,25 @@ import penoles.oraclebdutils.utils.StringUtils;
  */
 public class DatabaseController extends DatabaseControllerTools {
 
-    public static ResponseObject<Map<String, Object>, Exception> select(Object mObject) {
-        Map<String, Object> map = null;
+    public static ResponseObject<List<Object>, Exception> select(Object mObject) {
+        return select(mObject, null);
+    }
+
+    public static ResponseObject<List<Object>, Exception> select(Object mObject, boolean equals) {
+        return select(mObject, null, null, null, equals);
+    }
+
+    public static ResponseObject<List<Object>, Exception> select(Object mObject, String filterVariable) {
+        return select(mObject, filterVariable, null, null, false);
+    }
+
+    public static ResponseObject<List<Object>, Exception> select(Object mObject, String filterVariable, Integer page, Integer pageLength) {
+        return select(mObject, filterVariable, page, pageLength, false);
+    }
+
+    public static ResponseObject<List<Object>, Exception> select(Object mObject, String filterVariable, Integer page, Integer pageLength, boolean equals) {
+
+        List<Object> list = null;
         Exception exception = null;
 
         ResultSet rs = null;
@@ -27,12 +46,12 @@ public class DatabaseController extends DatabaseControllerTools {
 
         try {
             Map<String, String> mapKeys = new HashMap<>();
-            String sql = getSQL(mapKeys, mObject);
+            String sql = getSQL(mapKeys, mObject, filterVariable, equals, page, pageLength);
             ps = conexion.getConexion().prepareStatement(sql);
-            prepareStatementSelect(ps, mObject);
+            prepareStatementSelect(mapKeys, ps, mObject, equals);
             System.out.println("Excecuting... " + sql);
             rs = ps.executeQuery();
-            map = fillResultSet(rs, mObject, mapKeys);
+            list = fillResultSet(rs, mObject, mapKeys);
         } catch (Exception e) {
             e.printStackTrace();
             exception = e;
@@ -40,12 +59,13 @@ public class DatabaseController extends DatabaseControllerTools {
             conexion.closeConexion(ps, rs);
         }
 
-        return new ResponseObject<>(map, exception);
+        return new ResponseObject<>(list, exception);
     }
 
-    public static ResponseObject<Boolean, Exception> insert(Object mObject) {
+    //==========================================================================
+    public static ResponseObject<List<Object>, Exception> insert(Object mObject) {
 
-        boolean result = false;
+        List<Object> list = null;
         Exception exception = null;
         PreparedStatement ps = null;
         Conexion conexion = new Conexion();
@@ -53,9 +73,12 @@ public class DatabaseController extends DatabaseControllerTools {
         try {
             String sql = addSQL(mObject);
             ps = conexion.getConexion().prepareStatement(sql);
-            System.out.println("Excecuting... " + sql);
+            //System.out.print.println("Excecuting... " + sql);
             prepareStatementInsert(ps, mObject);
-            result = ps.executeUpdate() > 0;
+            ps.executeUpdate();
+
+            list = new ArrayList<>();
+            list.add(mObject);
         } catch (Exception e) {
             e.printStackTrace();
             exception = e;
@@ -63,12 +86,18 @@ public class DatabaseController extends DatabaseControllerTools {
             conexion.closeConexion(ps);
         }
 
-        return new ResponseObject<>(result, exception);
+        if (exception != null) {
+            return new ResponseObject<>(list, exception);
+        } else {
+            return select(mObject);
+        }
+
+        //======================================================================
     }
 
-    public static ResponseObject<Boolean, Exception> update(Object mObject) {
+    public static ResponseObject<Object, Exception> update(Object mObject) {
 
-        boolean result = false;
+        Object result = false;
         Exception exception = null;
         PreparedStatement ps = null;
         Conexion conexion = new Conexion();
@@ -78,8 +107,9 @@ public class DatabaseController extends DatabaseControllerTools {
             String sql = updateSQL(mObject, fieldId);
             ps = conexion.getConexion().prepareStatement(sql);
             prepareStatementUpdate(ps, mObject, fieldId);
-            System.out.println("Excecuting... " + sql);
-            result = ps.executeUpdate() > 0;
+            //System.out.print.println("Excecuting... " + sql);
+            ps.executeUpdate();
+            result = mObject;
         } catch (Exception e) {
             e.printStackTrace();
             exception = e;
@@ -90,28 +120,180 @@ public class DatabaseController extends DatabaseControllerTools {
         return new ResponseObject<>(result, exception);
     }
 
-    public static ResponseObject<Boolean, Exception> delete(Object mObject) {
+    public static ResponseObject<Object, Exception> delete(Object mObject) {
 
-        boolean result = false;
+        Object result = false;
         Exception exception = null;
         PreparedStatement ps = null;
         Conexion conexion = new Conexion();
 
         try {
-
             String fieldId = getFieldId(mObject);
             String sql = deleteSQL(mObject, fieldId);
             ps = conexion.getConexion().prepareStatement(sql);
             prepareStatementDelete(ps, mObject, fieldId);
-
-            System.out.println("Excecuting... " + sql);
-
-            result = ps.executeUpdate() > 0;
+            //System.out.print.println("Excecuting... " + sql);
+            ps.executeUpdate();
+            result = mObject;
         } catch (Exception e) {
             e.printStackTrace();
             exception = e;
         } finally {
             conexion.closeConexion(ps);
+        }
+
+        return new ResponseObject<>(result, exception);
+    }
+
+    //==========================================================================
+    public static ResponseObject<Object[], Exception> insert(Object[] objects) {
+
+        Object[] result = null;
+        Exception exception = null;
+
+        PreparedStatement ps = null;
+        Connection connection = null;
+        Conexion conexion = new Conexion();
+
+        if (objects != null && objects.length > 0) {
+            try {
+                connection = conexion.getConexion();
+                connection.setAutoCommit(false);
+
+                String sql = addSQL(objects[0]);
+                ps = connection.prepareStatement(sql);
+                //System.out.print.println("Excecuting Bulk... " + sql);
+
+                for (Object object : objects) {
+                    prepareStatementInsert(ps, object);
+                    ps.addBatch();
+                }
+
+                ps.executeBatch();
+                connection.commit();
+                result = objects;
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                exception = e;
+            } finally {
+                conexion.closeConexion(ps);
+            }
+        }
+
+        return new ResponseObject<>(result, exception);
+    }
+
+    public static ResponseObject<Object[], Exception> update(Object[] objects) {
+
+        Object[] result = null;
+        Exception exception = null;
+
+        PreparedStatement ps = null;
+        Connection connection = null;
+        Conexion conexion = new Conexion();
+
+        if (objects != null && objects.length > 0) {
+            try {
+                connection = conexion.getConexion();
+                connection.setAutoCommit(false);
+
+                String fieldId = getFieldId(objects[0]);
+                String sql = updateSQL(objects[0], fieldId);
+                ps = connection.prepareStatement(sql);
+                //System.out.print.println("Excecuting Bulk... " + sql);
+
+                for (Object object : objects) {
+                    prepareStatementUpdate(ps, object, fieldId);
+                    ps.addBatch();
+                }
+
+                ps.executeBatch();
+                connection.commit();
+                result = objects;
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                exception = e;
+            } finally {
+                conexion.closeConexion(ps);
+            }
+        }
+
+        return new ResponseObject<>(result, exception);
+    }
+
+    public static ResponseObject<Object[], Exception> delete(Object[] objects) {
+
+        Object[] result = null;
+        Exception exception = null;
+
+        PreparedStatement ps = null;
+        Connection connection = null;
+        Conexion conexion = new Conexion();
+
+        if (objects != null && objects.length > 0) {
+            try {
+
+                connection = conexion.getConexion();
+                connection.setAutoCommit(false);
+
+                String fieldId = getFieldId(objects[0]);
+                String sql = deleteSQL(objects[0], fieldId);
+                ps = connection.prepareStatement(sql);
+                //System.out.print.println("Excecuting Bulk... " + sql);
+
+                for (Object object : objects) {
+                    prepareStatementDelete(ps, object, fieldId);
+                    ps.addBatch();
+                }
+
+                ps.executeBatch();
+                connection.commit();
+                result = objects;
+            } catch (Exception e) {
+                e.printStackTrace();
+                exception = e;
+            } finally {
+                conexion.closeConexion(ps);
+            }
+        }
+
+        return new ResponseObject<>(result, exception);
+    }
+
+    //==========================================================================
+    public static ResponseObject<Integer, Exception> getLength(Object mObject) {
+        return getLength(mObject, false);
+    }
+
+    public static ResponseObject<Integer, Exception> getLength(Object mObject, boolean equals) {
+
+        Integer result = null;
+        Exception exception = null;
+
+        ResultSet rs = null;
+        PreparedStatement ps = null;
+        Conexion conexion = new Conexion();
+
+        try {
+
+            Map<String, String> mapKeys = new HashMap<>();
+            String sql = getLengthSQL(mapKeys, mObject, equals);
+            ps = conexion.getConexion().prepareStatement(sql);
+            prepareStatementSelect(mapKeys, ps, mObject, equals);
+            System.out.println("Excecuting... " + sql);
+            rs = ps.executeQuery();
+
+            while (rs.next()) {
+                result = rs.getInt(1);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            exception = e;
+        } finally {
+            conexion.closeConexion(ps, rs);
         }
 
         return new ResponseObject<>(result, exception);

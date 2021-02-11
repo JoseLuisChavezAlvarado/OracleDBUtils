@@ -1,16 +1,17 @@
 package penoles.oraclebdutils.database.controller;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
-import penoles.oraclebdutils.information_schema.InformationSchemaColumnsController;
-import penoles.oraclebdutils.information_schema.InformationSchemaViewsController;
 import penoles.oraclebdutils.entities.KeyColumnObject;
 import penoles.oraclebdutils.entities.TableDetails;
 import penoles.oraclebdutils.entities.ViewObject;
+import penoles.oraclebdutils.information_schema.InformationSchemaColumnsController;
+import penoles.oraclebdutils.information_schema.InformationSchemaViewsController;
 import penoles.oraclebdutils.singleton.DataInstance;
 import penoles.oraclebdutils.utils.ReflectUtils;
 import penoles.oraclebdutils.utils.StringUtils;
@@ -21,8 +22,7 @@ import penoles.oraclebdutils.utils.StringUtils;
  */
 public class DatabaseControllerTools extends DatabaseControllerToolsOperations {
 
-    //==========================================================================
-    protected static String getSQL(Map<String, String> mapKeys, Object mObject) throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+    protected static String getSQL(Map<String, String> mapKeys, Object mObject, String filterVariable, boolean equals, Integer page, Integer pageLength) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException {
 
         StringBuilder builderResult = new StringBuilder();
         StringBuilder builderParams = new StringBuilder();
@@ -56,8 +56,10 @@ public class DatabaseControllerTools extends DatabaseControllerToolsOperations {
         appendJoins(mapKeys, mObject, builderParams, builderResult, columnObjects, parentTable, parentAlias, parentTable);
 
         //APPEND WHERE'S
-        appendWheres(mapKeys, mObject, builderResult);
+        appendWheres(mapKeys, mObject, builderResult, parentTable, filterVariable, equals);
 
+        //APPEND LIMIT UPDATE
+        //appendLimit(builderResult, page, pageLength);
         return builderParams.substring(0, builderParams.length() - 2) + builderResult.toString();
     }
 
@@ -134,31 +136,42 @@ public class DatabaseControllerTools extends DatabaseControllerToolsOperations {
         return builder.toString();
     }
 
-    //==========================================================================
-    protected static void prepareStatementSelect(PreparedStatement ps, Object mObject) throws IllegalArgumentException, IllegalAccessException, SQLException {
+    protected static void prepareStatementSelect(Map<String, String> mapKeys, PreparedStatement ps, Object mObject, boolean equals) throws IllegalArgumentException, IllegalAccessException, SQLException, InvocationTargetException {
 
+        int index = 1;
         String tableName = InformationSchemaColumnsController.getTableName(mObject);
         List<TableDetails> list = DataInstance.getInstance().getTableDetailsList(tableName);
 
-        int index = 1;
-        for (Field field : mObject.getClass().getDeclaredFields()) {
-            field.setAccessible(true);
-            Object fieldValue = field.get(mObject);
-            if (fieldValue != null && ReflectUtils.isValidField(field)) {
-                boolean isDate = false;
-                for (TableDetails details : list) {
-                    if (field.getName().equalsIgnoreCase(details.getField()) && (details.getType().toLowerCase().contains("date") || details.getType().toLowerCase().contains("timestamp"))) {
-                        isDate = Boolean.TRUE;
-                        break;
+        for (Map.Entry entry : mapKeys.entrySet()) {
+            String key = entry.getKey().toString();
+
+            Object referencedObject = getReferencedObject(mObject, key);
+
+            if (referencedObject != null) {
+                for (Field field : referencedObject.getClass().getDeclaredFields()) {
+                    field.setAccessible(true);
+                    Object fieldValue = field.get(referencedObject);
+                    if (fieldValue != null && ReflectUtils.isValidField(field)) {
+
+                        boolean isDate = false;
+                        for (TableDetails details : list) {
+                            if (field.getName().equalsIgnoreCase(details.getField()) && (details.getType().toLowerCase().contains("date") || details.getType().toLowerCase().contains("timestamp"))) {
+                                isDate = Boolean.TRUE;
+                                break;
+                            }
+                        }
+
+                        if (isDate && Long.class.getSimpleName().equals(field.getType().getSimpleName())) {
+                            ps.setObject(index++, new Date(Long.valueOf(fieldValue.toString())));
+                        } else if (field.getType().getSimpleName().equalsIgnoreCase(String.class.getSimpleName()) && !equals) {
+                            String newObject = "%" + fieldValue + "%";
+                            fieldValue = newObject;
+                        } else {
+                            ps.setObject(index++, fieldValue);
+                        }
+
                     }
                 }
-
-                if (isDate && Long.class.getSimpleName().equals(field.getType().getSimpleName())) {
-                    ps.setObject(index++, new Date(Long.valueOf(fieldValue.toString())));
-                } else {
-                    ps.setObject(index++, fieldValue);
-                }
-
             }
         }
     }
@@ -249,4 +262,82 @@ public class DatabaseControllerTools extends DatabaseControllerToolsOperations {
     }
 
     //==========================================================================
+    protected static String getLengthSQL(Map<String, String> mapKeys, Object mObject, boolean equals) throws ClassNotFoundException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException {
+
+        StringBuilder builderResult = new StringBuilder();
+        StringBuilder builderParams = new StringBuilder();
+
+        //GET SCHEMA KEY VALUES
+        List<KeyColumnObject> columnObjects = InformationSchemaColumnsController.get(mObject.getClass());
+        List<ViewObject> viewObjects = InformationSchemaViewsController.get();
+
+        for (ViewObject viewObject : viewObjects) {
+            KeyColumnObject columnObject = new KeyColumnObject();
+            columnObject.setTable_name(viewObject.getTable_name());
+            columnObjects.add(columnObject);
+        }
+
+        //INIT BUILDERS
+        String parentTable = StringUtils.toLowerScoreCase(mObject.getClass().getSimpleName());
+        String parentAlias = StringUtils.getStringUIDD();
+        String objectName = StringUtils.toLowerScoreCase(mObject.getClass().getSimpleName());
+
+        for (KeyColumnObject keyObject : columnObjects) {
+            if (StringUtils.toLowerScoreCase(keyObject.getTable_name()).equalsIgnoreCase(objectName)) {
+                parentTable = keyObject.getTable_name();
+            }
+        }
+
+        builderParams.append(" select count(*)   ");
+        builderResult.append(" from ").append(parentTable).append(" ").append(parentAlias);
+
+        //APPEND JOINS
+        appendJoinsLength(mapKeys, mObject, builderResult, columnObjects, parentTable, parentAlias, parentTable);
+
+        //APPEND WHERE'S
+        appendWheres(mapKeys, mObject, builderResult, parentTable, null, equals);
+
+        return builderParams.substring(0, builderParams.length() - 2) + builderResult.toString();
+    }
+
+    protected static void appendJoinsLength(Map<String, String> mapKeys, Object mObject, StringBuilder builderResult, List<KeyColumnObject> list, String parentTable, String parentAlias, String parentChain) throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+
+        String key = parentChain;
+        String value = parentAlias;
+        mapKeys.put(key, value);
+
+        for (int i = 0; i < list.size(); i++) {
+            if (list.get(i).getTable_name().equalsIgnoreCase(parentTable)) {
+                KeyColumnObject keyObject = list.get(i);
+
+                String fieldType = "";
+                String fieldName = "";
+                String chain = "";
+
+                if (keyObject.getReferenced_table_name() != null) {
+                    fieldType = StringUtils.toUpperCamelCase(keyObject.getReferenced_table_name());
+                    fieldName = StringUtils.toFirstUpperCased(keyObject.getColumn_name());
+                    chain = fieldType + fieldName;
+                }
+
+                String newParentAlias = StringUtils.getStringUIDD();
+                String newParentTable = keyObject.getReferenced_table_name();
+                String newParentChain = parentChain + " " + chain;
+
+                if (newParentTable != null) {
+
+                    String childStringClass = StringUtils.toUpperCamelCase(newParentTable);
+
+                    Object childObjectInstance = ReflectUtils.getChildObjectInstance(mObject, childStringClass);
+
+                    builderResult.append(" join ").append(newParentTable).append(" ").append(newParentAlias);
+                    builderResult.append(" on ").append(newParentAlias).append(".").append(keyObject.getReferenced_column_name()).append(" = ");
+                    builderResult.append(parentAlias).append(".").append(keyObject.getColumn_name());
+
+                    appendJoinsLength(mapKeys, childObjectInstance, builderResult, list, newParentTable, newParentAlias, newParentChain);
+                }
+            }
+        }
+    }
+
 }
